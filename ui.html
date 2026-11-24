@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<title>Spacewise</title>
+<style>
+  :root {
+    --bg: #0d0f15; --card: #161923; --card2: #1c2030; --line: #262b3d; --hover: #20253a;
+    --fg: #eceef4; --dim: #8b91a7; --accent: #7c8cff; --accent2: #9aa6ff;
+    --red: #ff6e6e; --orange: #f7b246; --blue: #6ea8ff; --green: #46d68c; --gray: #969cac; --purple: #c08cff;
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; }
+  body {
+    background: radial-gradient(1200px 600px at 80% -20%, #1b1f3a 0%, transparent 60%), var(--bg);
+    color: var(--fg); font: 14px/1.45 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    display: flex; flex-direction: column; overflow: hidden; user-select: none;
+  }
+  [dir=rtl] body { font-size: 14.5px; }
+  button { font: inherit; color: inherit; border: 0; cursor: pointer; background: none; }
+  button:focus { outline: none; } button:focus-visible { outline: 2px solid #7c8cff80; outline-offset: 2px; }
+  input:focus { border-color: #7c8cff88 !important; }
+  .app { display: flex; flex-direction: column; height: 100%; padding: 22px 26px 74px; gap: 16px; }
+
+  /* ---- top ---- */
+  .top { display: flex; align-items: center; gap: 12px; }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 650; font-size: 19px; letter-spacing: -.2px; margin-inline-end: auto; }
+  /* the brand mark: a disk-usage ring (indigo = your disk, green = space you get back, orange = careful) */
+  .mark { position: relative; width: 28px; height: 28px; }
+  .mark i { position: absolute; inset: 0; border-radius: 50%; filter: drop-shadow(0 0 10px #7c8cff66);
+    background: conic-gradient(transparent 0 4deg, var(--accent) 4deg 236deg, transparent 236deg 244deg, var(--green) 244deg 311deg, transparent 311deg 319deg, var(--orange) 319deg 348deg, transparent 348deg);
+    -webkit-mask: radial-gradient(circle, transparent 41%, #000 42%); }
+  .mark b { position: absolute; width: 5px; height: 5px; border-radius: 50%; background: var(--fg); left: 50%; top: 50%; transform: translate(-50%, -50%); }
+  .select { position: relative; }
+  .select select {
+    appearance: none; background: var(--card); color: var(--fg); border: 1px solid var(--line); border-radius: 999px;
+    padding-block: 9px; padding-inline: 16px 40px; font: inherit; cursor: pointer; outline: none;
+  }
+  .select::after { content: "⌄"; position: absolute; inset-inline-end: 16px; top: 5px; color: var(--dim); pointer-events: none; font-size: 15px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px; padding: 9px 18px; border-radius: 999px;
+    background: var(--card); border: 1px solid var(--line); font-weight: 600;
+    /* only colours and transform move: no animated shadows or blur, which are costly to redraw on big, high-DPI screens */
+    transition: background-color .15s, color .15s, border-color .15s, opacity .15s, transform .15s ease-out;
+  }
+  .btn:hover { background: var(--hover); transform: translateY(-1px); }
+  .btn:active { transform: scale(.96); transition-duration: .05s; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #0d0f15; }
+  .btn.primary:hover { background: var(--accent2); }
+  .btn.danger { color: var(--red); }
+  .btn.solid-danger { background: #ff6e6e1f; border-color: #ff6e6e55; color: var(--red); }
+  .btn.solid-danger:hover { background: #ff6e6e33; }
+  .btn.primary-danger { background: var(--red); border-color: var(--red); color: #0d0f15; }
+  .btn.primary-danger:hover { background: #ff8a8a; }
+  .btn.ghost { background: transparent; color: var(--dim); }
+  .btn.ghost:hover { color: var(--fg); background: var(--card); }
+  .btn.small { padding: 6px 14px; font-size: 13px; }
+  .btn:disabled { opacity: .35; pointer-events: none; }
+  #star:hover { color: #ffd166; }
+
+  /* ---- usage card ---- */
+  .usage { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 22px 16px; }
+  .usage .row { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+  .usage .free { font-size: 22px; font-weight: 650; letter-spacing: -.3px; }
+  .usage .of { color: var(--dim); margin-inline-start: auto; }
+  .meter { height: 10px; border-radius: 99px; background: var(--line); overflow: hidden; }
+  .meter b { display: block; height: 100%; border-radius: 99px; background: var(--accent); transition: width .5s; }
+  .meter b.warn { background: var(--orange); } .meter b.full { background: var(--red); }
+  .spin { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--line); border-top-color: var(--accent); animation: s 0.8s linear infinite; }
+  @keyframes s { to { transform: rotate(360deg); } }
+
+  /* ---- tabs ---- */
+  .tabs { position: relative; display: inline-flex; background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 4px; align-self: flex-start; }
+  .tabs button { position: relative; z-index: 1; padding: 7px 18px; border-radius: 999px; color: var(--dim); font-weight: 600; transition: color .15s, transform .12s; }
+  .tabs button:hover { color: var(--fg); }
+  .tabs button:active { transform: scale(.95); }
+  .tabs button.on { color: var(--fg); }
+  /* the pill that slides to the chosen tab */
+  .tabs .ind { position: absolute; top: 4px; bottom: 4px; left: 0; width: 0; border-radius: 999px; background: var(--card2);
+    box-shadow: 0 1px 0 #ffffff10 inset; will-change: transform; transition: transform .3s cubic-bezier(.3,.8,.2,1), width .3s cubic-bezier(.3,.8,.2,1); }
+
+  .page { display: none; flex: 1; min-height: 0; gap: 14px; }
+  .page.on { display: flex; animation: pageIn .2s ease-out both; }
+  @keyframes pageIn { from { opacity: 0; } }
+  @keyframes rowIn { from { opacity: 0; transform: translateY(6px); } }
+  @keyframes fadeIn { from { opacity: 0; } }
+  @keyframes pop { 0% { transform: scale(.8); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
+  /* only the first rows on screen fade in (set in code), never thousands at once */
+  .enter { animation: rowIn .28s ease-out both; animation-delay: calc(var(--i, 0) * 18ms); }
+  /* long lists: a change inside a list never makes the browser re-measure the rest of the window (and vice versa),
+     and rows are added a page at a time as you scroll, so a click stays a ~1 ms job even with thousands of files */
+  .list, .card, .side { contain: strict; }
+  .foot { contain: strict; height: 46px; flex: none; }
+  .foot .sum { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .more { height: 1px; }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0s !important; transition-duration: .01ms !important; } }
+
+  /* selection: an animated check, and the whole row lights up */
+  .check { width: 22px; height: 22px; border-radius: 7px; border: 2px solid #3a4160; display: grid; place-items: center; flex: none;
+    transition: background-color .15s, border-color .15s; }
+  .check svg { width: 14px; height: 14px; overflow: visible; }
+  .check path { fill: none; stroke: #0d0f15; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 16; stroke-dashoffset: 16; transition: stroke-dashoffset .2s .04s ease-out; }
+  .on > .check { background: var(--accent); border-color: var(--accent); animation: pop .22s ease-out; }
+  .on > .check path { stroke-dashoffset: 0; }
+  .pick:hover > .check { border-color: var(--accent); }
+  .pick { cursor: pointer; transition: background-color .12s; }
+  .pick.on { background: #7c8cff12; box-shadow: inset 0 0 0 1px #7c8cff4d; }
+  .pick.on:hover { background: #7c8cff1c; }
+  .pick.focus { box-shadow: inset 0 0 0 1px #7c8cff99; }
+
+  /* right-click menu, like Windows' */
+  .menu { position: fixed; z-index: 70; min-width: 240px; background: #1a1e2c; border: 1px solid var(--line); border-radius: 14px; padding: 6px;
+    box-shadow: 0 10px 28px #000a; transform-origin: top left; animation: menuIn .12s ease-out; }
+  [dir=rtl] .menu { transform-origin: top right; }
+  @keyframes menuIn { from { opacity: 0; transform: scale(.94) translateY(-4px); } }
+  .menu button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border-radius: 9px; text-align: start; transition: background .12s; }
+  .menu button:hover { background: var(--hover); }
+  .menu button:disabled { opacity: .35; pointer-events: none; }
+  .menu .i { width: 18px; text-align: center; }
+  .menu kbd { margin-inline-start: auto; padding-inline-start: 16px; color: var(--dim); font: 12px "Segoe UI", sans-serif; direction: ltr; }
+  .menu hr { border: 0; border-top: 1px solid var(--line); margin: 5px 4px; }
+  .menu .red { color: var(--red); }
+
+  /* ---- explore ---- */
+  .list-wrap { flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+  .crumb { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+  .crumb .path { color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; direction: rtl; text-align: left; flex: 1; min-width: 60px; }
+  [dir=rtl] .crumb .path { text-align: right; }
+  .crumb .path.plain { direction: inherit; text-align: start; }
+  .crumb .total { font-weight: 600; white-space: nowrap; }
+  .crumb .when { color: var(--dim); font-size: 12px; white-space: nowrap; }
+  .search { width: 200px; background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; font: inherit; outline: none; }
+  .search::placeholder { color: var(--dim); }
+  .list { flex: 1; overflow-y: auto; padding: 6px; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; } ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-button { display: none; }
+  ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 9px; border: 3px solid var(--card); }
+  .item { display: grid; grid-template-columns: 34px minmax(120px, 1fr) 96px 130px 128px; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 12px; cursor: default; transition: background-color .1s; }
+  .item:hover { background: var(--hover); }
+  .share b { transition: width .6s cubic-bezier(.2,.8,.2,1); }
+  .donut circle.seg:hover { opacity: 1 !important; }
+  .item.sel { background: var(--card2); box-shadow: inset 0 0 0 1px #7c8cff40; }
+  .ico { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; background: #ffffff08; font-size: 15px; }
+  .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .name small { display: block; color: var(--dim); font-size: 12px; overflow: hidden; text-overflow: ellipsis; direction: ltr; }
+  [dir=rtl] .name small { text-align: right; }
+  .size { text-align: end; font-variant-numeric: tabular-nums; color: var(--fg); }
+  .share { height: 6px; border-radius: 9px; background: var(--line); overflow: hidden; }
+  .share b { display: block; height: 100%; background: var(--accent); border-radius: 9px; }
+  .chip { display: inline-flex; align-items: center; gap: 7px; padding: 4px 10px; border-radius: 99px; font-size: 12.5px; font-weight: 600; width: max-content; }
+  .chip::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .v0 { color: var(--red); background: #ff6e6e14; } .v1 { color: var(--orange); background: #f7b24614; }
+  .v2 { color: var(--blue); background: #6ea8ff14; } .v3 { color: var(--green); background: #46d68c14; }
+  .v4 { color: var(--gray); background: #969cac14; } .v5 { color: var(--purple); background: #c08cff14; }
+
+  .side { width: 310px; flex: none; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+  .side .head { display: flex; align-items: center; gap: 14px; }
+  .side .head > div { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+  .side h3 { font-size: 16px; font-weight: 650; word-break: break-word; }
+  .side .big { font-size: 24px; font-weight: 700; letter-spacing: -.5px; }
+  .side p { color: var(--dim); }
+  .side .meta { color: var(--dim); font-size: 12.5px; }
+  .side .actions { margin-top: auto; display: flex; flex-direction: column; gap: 8px; }
+  .side .actions .btn { justify-content: center; }
+  .donut { width: 112px; height: 112px; flex: none; }
+  .donut circle.seg { cursor: pointer; transition: opacity .15s; }
+  .donut text { fill: var(--dim); font-size: 11px; text-anchor: middle; }
+  .empty { margin: auto; text-align: center; color: var(--dim); max-width: 360px; }
+  .empty .em { font-size: 40px; margin-bottom: 10px; }
+  .pad { padding: 60px 0; }
+
+  /* ---- old files, custom, duplicates & clean ---- */
+  .col { flex: 1; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+  .bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; color: var(--dim); }
+  .num { width: 70px; background: var(--card); color: var(--fg); border: 1px solid var(--line); border-radius: 999px; padding: 7px 12px; font: inherit; text-align: center; outline: none; }
+  .text { width: 240px; background: var(--card); color: var(--fg); border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; font: inherit; outline: none; direction: ltr; }
+  .text::placeholder { color: var(--dim); }
+  [dir=rtl] .text { text-align: right; }
+  .card { flex: 1; min-height: 0; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); overflow-y: auto; padding: 6px; }
+  .row2 { display: grid; grid-template-columns: 44px minmax(120px, 1fr) 96px 120px 34px; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 12px; }
+  .row2:hover { background: var(--hover); }
+  .row2 .when { color: var(--dim); text-align: end; }
+  .row2 .where { grid-column: 2 / 6; color: var(--dim); font-size: 12px; margin-top: -6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; direction: ltr; text-align: left; }
+  [dir=rtl] .row2 .where { text-align: right; }
+  .reveal { width: 30px; height: 30px; border-radius: 9px; color: var(--dim); display: grid; place-items: center; opacity: 0; transition: opacity .15s, background .15s; }
+  .row2:hover .reveal { opacity: 1; } .reveal:hover { background: var(--card2); color: var(--fg); }
+  .group { margin: 6px 6px 12px; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  .group h4 { display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 600; color: var(--dim); padding: 10px 14px; background: var(--card2); }
+  .group h4 b { color: var(--fg); }
+  .row3 { display: grid; grid-template-columns: 52px 1fr 110px; gap: 12px; align-items: center; padding: 14px; border-radius: 12px; }
+  .row3:hover { background: var(--hover); }
+  .row3 p { color: var(--dim); font-size: 12.5px; }
+  .row3 .size { font-weight: 650; }
+  .note { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 12px; background: #f7b24614; color: var(--orange); }
+  .note span { flex: 1; }
+  .foot { display: flex; align-items: center; gap: 12px; }
+  .foot .sum { color: var(--dim); }
+  .foot .sum b { color: var(--fg); }
+
+  /* type picker */
+  .types { display: flex; flex-wrap: wrap; gap: 8px; }
+  .type { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; background: var(--card); border: 1px solid var(--line); color: var(--dim); font-weight: 600;
+    transition: color .15s, background-color .15s, border-color .15s, transform .15s ease-out; }
+  .type:hover { color: var(--fg); background: var(--hover); transform: translateY(-1px); }
+  .type:active { transform: scale(.94); transition-duration: .07s; }
+  .type.on { color: var(--fg); background: #7c8cff22; border-color: #7c8cff88; box-shadow: 0 0 0 3px #7c8cff1a; }
+  .type.on span { animation: pop .22s ease-out; }
+  .type span { font-size: 15px; }
+  .type.sep { margin-inline-start: 8px; }
+
+  /* switch */
+  .sw { width: 38px; height: 22px; border-radius: 99px; background: var(--line); position: relative; transition: background .15s; cursor: pointer; }
+  .sw::after { content: ""; position: absolute; top: 3px; inset-inline-start: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform .15s; }
+  .sw.on { background: var(--accent); } .sw.on::after { transform: translateX(16px); }
+  [dir=rtl] .sw.on::after { transform: translateX(-16px); }
+
+  /* ---- live scan view ---- */
+  .scanview { margin: auto; width: min(560px, 90%); text-align: center; }
+  .scanview .pct { font-size: 46px; font-weight: 700; letter-spacing: -1.5px; direction: ltr; line-height: 1.1; }
+  .scanview .pct small { font-size: 20px; color: var(--dim); font-weight: 600; }
+  .scanview .meter { height: 12px; margin: 14px 0 10px; direction: ltr; }
+  .scanview .meter b { background: linear-gradient(90deg, var(--accent), #a58bff); position: relative; overflow: hidden; }
+  .scanview .meter b::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, #ffffff40, transparent); animation: shine 1.4s linear infinite; }
+  .scanview .meter.indet b { width: 35% !important; animation: slide 1.3s ease-in-out infinite; }
+  @keyframes shine { from { transform: translateX(-100%) } to { transform: translateX(100%) } }
+  @keyframes slide { 0% { margin-left: -35% } 100% { margin-left: 100% } }
+  .now { color: var(--dim); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; margin-top: 4px; }
+  .now b { color: var(--fg); font-weight: 600; }
+  .stats { display: flex; justify-content: center; gap: 12px; margin-top: 14px; }
+  .stat { background: var(--card2); border: 1px solid var(--line); border-radius: 14px; padding: 10px 16px; min-width: 120px; }
+  .stat b { display: block; font-size: 20px; font-variant-numeric: tabular-nums; }
+  .stat span { color: var(--dim); font-size: 12px; }
+
+  /* ---- modal & toast ---- */
+  .modal { position: fixed; inset: 0; background: #05060ad9; display: none; place-items: center; z-index: 50; }
+  .modal.on { display: grid; animation: fadeIn .15s ease-out; }
+  .modal.on .dialog { animation: dlgIn .2s ease-out; }
+  @keyframes dlgIn { from { opacity: 0; transform: translateY(8px) scale(.97); } }
+  .dialog { width: min(480px, 92vw); background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 26px; box-shadow: 0 20px 40px #0008; }
+  .dialog h3 { font-size: 18px; margin-bottom: 8px; }
+  .dialog p { color: var(--dim); white-space: pre-line; }
+  .dialog .warn { color: var(--orange); margin-top: 10px; }
+  .dialog .warn:empty, .dialog .hint:empty { display: none; }
+  .dialog .hint { font-size: 12.5px; margin-top: 12px; padding: 10px 12px; border-radius: 12px; background: var(--card2); }
+  .dialog .acts { display: flex; justify-content: flex-end; gap: 8px; margin-top: 22px; flex-wrap: wrap; }
+  .toast { position: fixed; left: 50%; bottom: 22px; transform: translate(-50%, 30px); opacity: 0; background: var(--card2); border: 1px solid var(--line); padding: 11px 18px; border-radius: 999px; transition: opacity .2s ease-out, transform .2s ease-out; box-shadow: 0 8px 24px #0008; pointer-events: none; max-width: 60vw; text-align: center; z-index: 60; }
+  .toast.on { opacity: 1; transform: translate(-50%, 0); }
+
+  /* Ko-fi: floating button + panel (Ko-fi's own page in a sandboxed frame; their script never runs here) */
+  #kofi { position: fixed; inset-inline-start: 26px; bottom: 18px; z-index: 40; display: grid; gap: 10px; justify-items: start; }
+  .kofi-btn { display: inline-flex; align-items: center; gap: 8px; border-radius: 999px; padding: 11px 18px; font-weight: 600; background: #00b9fe; color: #fff; box-shadow: 0 4px 14px #00b9fe40; transition: transform .15s ease-out, background-color .15s; }
+  .kofi-btn:hover { transform: translateY(-1px); background: #1ec2ff; }
+  .kofi-btn:active { transform: scale(.96); transition-duration: .05s; }
+  #kofi.open .kofi-panel { animation: dlgIn .2s ease-out; transform-origin: bottom left; }
+  .kofi-panel { position: relative; width: min(340px, calc(100vw - 52px)); height: min(560px, 72vh); border-radius: 16px; overflow: hidden; background: #fff; box-shadow: 0 12px 32px #0000008c; display: none; }
+  #kofi.open .kofi-panel { display: block; }
+  .kofi-panel iframe { width: 100%; height: 100%; border: 0; display: block; }
+  .kofi-x { position: absolute; top: 6px; inset-inline-end: 8px; z-index: 1; background: #00000073; color: #fff; width: 28px; height: 28px; border-radius: 50%; font-size: 18px; line-height: 1; }
+  .kofi-tip { color: var(--dim); font-size: 12.5px; }
+  #kofi .row { display: flex; align-items: center; gap: 12px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <div class="logo"><span class="mark"><i></i><b></b></span>Spacewise</div>
+    <button class="btn ghost" id="star" data-t="star"></button>
+    <button class="btn ghost" id="lang"></button>
+    <div class="select"><select id="drive"></select></div>
+    <button class="btn primary" id="scan"></button>
+  </div>
+
+  <div class="usage">
+    <div class="row"><span class="free" id="free">—</span><span class="of" id="of"></span></div>
+    <div class="meter"><b id="meter" style="width:0"></b></div>
+  </div>
+
+  <div class="tabs" id="tabs">
+    <span class="ind" id="ind"></span>
+    <button data-p="0" class="on" data-t="tabExplore"></button>
+    <button data-p="1" data-t="tabOld"></button>
+    <button data-p="2" data-t="tabCustom"></button>
+    <button data-p="3" data-t="tabDup"></button>
+    <button data-p="4" data-t="tabClean"></button>
+  </div>
+
+  <!-- explore -->
+  <div class="page on" id="p0">
+    <div class="list-wrap">
+      <div class="crumb">
+        <button class="btn" id="back"></button>
+        <span class="path" id="path"></span>
+        <input class="search" id="search" spellcheck="false">
+        <span class="when" id="when"></span>
+        <span class="total" id="total"></span>
+      </div>
+      <div class="list" id="list"></div>
+    </div>
+    <div class="side" id="side"></div>
+  </div>
+
+  <!-- old files -->
+  <div class="page" id="p1">
+    <div class="col">
+      <div class="bar"><span data-t="old1"></span>
+        <input class="num" id="months" type="number" min="1" value="6"><span data-t="old2"></span>
+        <input class="num" id="mb" type="number" min="1" value="10"><span data-t="mbUnit"></span>
+        <button class="btn primary" id="find" data-t="find"></button>
+      </div>
+      <div class="card" id="olds"></div>
+      <div class="foot">
+        <button class="btn primary" id="delOld" data-t="delSel" disabled></button>
+        <button class="btn" id="allOld"></button>
+        <span class="sum" id="oldSum"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- custom: find by type -->
+  <div class="page" id="p2">
+    <div class="col">
+      <div class="types" id="types"></div>
+      <div class="bar">
+        <input class="text" id="other" spellcheck="false">
+        <span data-t="biggerThan"></span><input class="num" id="typeMb" type="number" min="0" step="0.5" value="1"><span data-t="mbUnit"></span>
+        <button class="btn primary" id="findType"></button>
+        <span class="where-label" style="margin-inline-start:auto"></span>
+      </div>
+      <div class="card" id="typed"></div>
+      <div class="foot">
+        <button class="btn primary" id="delType" data-t="delSel" disabled></button>
+        <button class="btn" id="allType"></button>
+        <span class="sum" id="typeSum"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- duplicates -->
+  <div class="page" id="p3">
+    <div class="col">
+      <div class="bar"><span data-t="dup1"></span>
+        <input class="num" id="dupMb" type="number" min="0" step="0.5" value="1"><span data-t="mbUnit"></span>
+        <button class="btn primary" id="findDup"></button>
+        <span class="where-label" style="margin-inline-start:auto"></span>
+      </div>
+      <div class="card" id="dups"></div>
+      <div class="foot">
+        <button class="btn primary" id="delDup" data-t="delSel" disabled></button>
+        <button class="btn" id="extraDup" data-t="selExtra" disabled></button>
+        <span class="sum" id="dupSum"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- quick clean -->
+  <div class="page" id="p4">
+    <div class="col">
+      <div class="bar" data-t="cleanIntro"></div>
+      <div class="note" id="adminNote" style="display:none"><span data-t="adminNote"></span><button class="btn small" id="admin" data-t="adminBtn"></button></div>
+      <div class="card" id="cleans"></div>
+      <div class="foot">
+        <button class="btn primary" id="clean" data-t="cleanNow"></button>
+        <span class="sum" id="cleanSum"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="modal"><div class="dialog">
+  <h3 id="mTitle"></h3><p id="mText"></p><p class="warn" id="mWarn"></p><p class="hint" id="mHint"></p>
+  <div class="acts" id="mActs"></div>
+</div></div>
+<div class="toast" id="toast"></div>
+<div id="kofi">
+  <div class="kofi-panel" id="kofiPanel"><button class="kofi-x" id="kofiX">×</button></div>
+  <div class="row"><button class="kofi-btn" id="kofiBtn" data-t="supportMe"></button><span class="kofi-tip" data-t="supportTip"></span></div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const send = (cmd, data = {}) => window.chrome.webview.postMessage({ cmd, ...data });
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+// sizes and paths stay left-to-right inside Arabic text
+const ltr = (s) => '⁦' + s + '⁩';
+const human = (b) => { const u = ['B', 'KB', 'MB', 'GB', 'TB']; let i = 0; while (b >= 1024 && i < 4) { b /= 1024; i++ } return ltr(i ? b.toFixed(b < 10 ? 2 : b < 100 ? 1 : 0) + ' ' + u[i] : b + ' B') };
+const num = (n) => (n || 0).toLocaleString('en-US');
+const sum = (list) => list.reduce((a, f) => a + f.size, 0);
+
+// ---------------- words ----------------
+const WORDS = {
+  en: {
+    langBtn: 'العربية', scan: 'Scan', stop: 'Stop', star: '⭐ Star on GitHub',
+    supportMe: 'Support me ☕', supportTip: 'Freed some space? Support Spacewise with a tip.',
+    free: (x) => `${x} free`, usedOf: (a, b) => `${a} used of ${b}`, pressScanUsage: 'Press Scan to look inside',
+    drive: (l) => `Drive ${l}`, userFolder: 'My user folder', searchIn: (w) => `Searching ${w}`,
+    tabExplore: 'Explore', tabOld: 'Old files', tabCustom: 'Custom', tabDup: 'Duplicates', tabClean: 'Quick clean',
+    verdicts: ['Don’t delete', 'Careful', 'Your files', 'Safe to delete', 'Unknown', 'Program'],
+    pathHint: 'Press Scan to see what’s using your space',
+    exploreEmpty: 'Press <b>Scan</b> and Spacewise will show you what fills your disk, and what’s safe to delete.',
+    sideEmpty: 'Click anything to see what it is and whether you can delete it.',
+    folderEmpty: 'This folder is empty.', small: (n) => `(${n} small files)`, other: 'Everything else',
+    lastChanged: (d) => `Last changed ${d}`, nFiles: (n) => `${n} files`,
+    scannedAt: (d) => `Scanned ${d}`,
+    searchPh: 'Search this scan…', searchTitle: (n, q) => `${n} results for “${q}”`, searchNone: 'Nothing with that name.',
+    lookInside: 'Look inside →', openFolder: 'Open folder', showInFolder: 'Show in folder', del: 'Delete…', uninstall: 'Uninstall from Settings',
+    hibOff: 'Turn off hibernation', hibQ: 'Turn off hibernation?', hibYes: 'Turn off',
+    hibText: (s) => `Frees ${s} right away. You lose Hibernate and Fast Startup (your PC may start a few seconds slower). Windows will ask for admin permission.\nTurn it back on any time with: powercfg /h on`,
+    delQ1: (name) => `Delete “${name}”?`, delQN: (n) => `Delete ${n} files?`,
+    toBin: 'Move to Recycle Bin', delPerm: 'Delete permanently',
+    permHint: 'Recycle Bin: you can restore it later, but the space is freed only when you empty the bin.\nDelete permanently: frees the space right away and can’t be undone.',
+    noBinAll: 'This can’t go to the Recycle Bin (too big, or the drive has none). It can only be deleted permanently.',
+    noBinSome: (n) => `${n} of them can’t go to the Recycle Bin (too big, or the drive has none). Those are skipped unless you delete permanently.`,
+    unsure: '⚠ Spacewise isn’t sure this is safe to delete.', appWarn: '⚠ This belongs to a program. Uninstalling the program is safer than deleting its files.',
+    cancel: 'Cancel',
+    old1: 'Big files you haven’t changed for', old2: 'months, bigger than', mbUnit: 'MB', find: 'Find them',
+    oldHint: 'Looks in Downloads, Desktop, Documents, Pictures, Videos and Music.', oldNone: 'Nothing old and big. Nice and tidy!',
+    looking: 'Looking…', delSel: 'Delete selected', selAll: 'Select all', selNone: 'Select none',
+    switchOn: 'Click files to select them. Right-click for more; Del and Shift+Del work too.',
+    permOnly: 'This can’t be undone. The space is freed right away.',
+    menuSelect: 'Select', menuUnselect: 'Unselect', lookInsideShort: 'Look inside', openFile: 'Open',
+    toBinN: (n) => `Move ${n} files to Recycle Bin`, delPermN: (n) => `Delete ${n} files permanently`,
+    selected: (a, b, s) => `<b>${a}</b> of ${b} selected · <b>${s}</b>`,
+    filesSize: (n, s) => `${n} files · ${s}`, showing: (n, all) => `Showing the biggest ${n} of ${all}.`,
+    types: { img: 'Photos', vid: 'Videos', aud: 'Audio', doc: 'Documents', zip: 'Archives', exe: 'Installers', iso: 'Disk images', all: 'Biggest files' },
+    otherPh: 'Other types, e.g. psd, blend', biggerThan: 'bigger than',
+    typeHint: 'Pick one or more types, then press <b>Find them</b>. Or pick <b>Biggest files</b> to see the largest files on the drive. Windows, programs and caches are skipped, so you only see your own files.',
+    typeNone: 'No files of that type here.', typeLooking: (n) => `Looking… ${n} files checked`, stoppedSearch: 'Search stopped.', pickType: 'Pick a type first',
+    dup1: 'Files that are exact copies of each other, bigger than',
+    dupHint: 'Finds files with exactly the same content, even when their names are different. Windows, programs and caches are skipped.',
+    dupNone: 'No duplicates found. Nice!', dupListing: (n) => `Listing files… ${n} checked`, dupComparing: (d, t) => `Comparing contents… ${d} of ${t}`,
+    dupGroup: (n, s, w) => `<b>${n} copies</b> · ${s} each · ${w} extra`, dupTotal: (n, w) => `${n} files have copies · <b>${w}</b> taken by extra copies`,
+    selExtra: 'Select extra copies', keepOne: 'Keep at least one copy.',
+    cleanIntro: 'Leftovers your programs don’t need. They come back on their own, so cleaning them is always safe.',
+    adminNote: 'Some items need admin rights to clean fully.', adminBtn: 'Restart as admin',
+    cleanNow: 'Clean now', measuring: 'Measuring…', toFree: (s) => `<b>${s}</b> to free`, cleanQ: 'Clean now?', clean: 'Clean', cleaning: 'Cleaning…',
+    binEmptied: 'The Recycle Bin will be emptied: those files can’t be restored.',
+    scanningDisk: 'Scanning your disk', reading: 'Reading', filesRead: 'files read', foundSoFar: 'found so far', time: 'time',
+    stopped: 'Scan stopped', stoppedLong: 'Scan stopped. Press <b>Scan</b> to start again.',
+    secs: (s) => s < 60 ? s + 's' : Math.floor(s / 60) + 'm ' + (s % 60) + 's',
+    dateLocale: 'en-GB', point: '👈',
+  },
+  ar: {
+    langBtn: 'English', scan: 'افحص', stop: 'إيقاف', star: '⭐ قيّمه بنجمة',
+    supportMe: 'ادعمني ☕', supportTip: 'وفّر لك مساحة؟ يمكنك دعم Spacewise بأي مبلغ.',
+    free: (x) => `${x} متاحة`, usedOf: (a, b) => `مستخدم ${a} من ${b}`, pressScanUsage: 'اضغط «افحص» لترى ما بداخله',
+    drive: (l) => `القرص ${ltr(l)}`, userFolder: 'مجلدي', searchIn: (w) => `يبحث في ${w}`,
+    tabExplore: 'استكشاف', tabOld: 'الملفات القديمة', tabCustom: 'مخصص', tabDup: 'المكررة', tabClean: 'تنظيف سريع',
+    verdicts: ['لا تحذفه', 'انتبه', 'ملفاتك', 'آمن للحذف', 'غير معروف', 'برنامج'],
+    pathHint: 'اضغط «افحص» لترى ما يشغل مساحتك',
+    exploreEmpty: 'اضغط <b>افحص</b> وسيعرض لك Spacewise ما يملأ قرصك، وما الآمن حذفه.',
+    sideEmpty: 'اضغط على أي عنصر لتعرف ما هو وهل يمكنك حذفه.',
+    folderEmpty: 'هذا المجلد فارغ.', small: (n) => `(${n} ملف صغير)`, other: 'الباقي',
+    lastChanged: (d) => `آخر تعديل ${d}`, nFiles: (n) => `${n} ملف`,
+    scannedAt: (d) => `فُحص ${d}`,
+    searchPh: 'ابحث في نتيجة الفحص…', searchTitle: (n, q) => `${n} نتيجة لـ «${q}»`, searchNone: 'لا يوجد شيء بهذا الاسم.',
+    lookInside: '← اعرض ما بداخله', openFolder: 'افتح المجلد', showInFolder: 'أظهره في المجلد', del: 'احذف…', uninstall: 'ألغِ التثبيت من الإعدادات',
+    hibOff: 'أوقف السبات', hibQ: 'إيقاف السبات؟', hibYes: 'أوقفه',
+    hibText: (s) => `يحرر ${s} فورًا. ستفقد وضع السبات وبدء التشغيل السريع (قد يبدأ جهازك أبطأ بثوانٍ). سيطلب ويندوز صلاحيات المسؤول.\nيمكنك إعادة تفعيله في أي وقت بالأمر: powercfg /h on`,
+    delQ1: (name) => `حذف «${name}»؟`, delQN: (n) => `حذف ${n} ملف؟`,
+    toBin: 'انقل إلى سلة المحذوفات', delPerm: 'احذف نهائيًا',
+    permHint: 'سلة المحذوفات: يمكنك استرجاعه لاحقًا، لكن المساحة لا تتحرر إلا بعد إفراغ السلة.\nالحذف النهائي: يحرر المساحة فورًا ولا يمكن التراجع عنه.',
+    noBinAll: 'لا يمكن نقله لسلة المحذوفات (حجمه كبير أو القرص بدون سلة). يمكن حذفه نهائيًا فقط.',
+    noBinSome: (n) => `${n} منها لا يمكن نقلها لسلة المحذوفات (حجمها كبير أو القرص بدون سلة). ستُتخطى إلا إذا اخترت الحذف النهائي.`,
+    unsure: '⚠ Spacewise غير متأكد أن حذفه آمن.', appWarn: '⚠ هذا تابع لبرنامج. إلغاء تثبيت البرنامج أسلم من حذف ملفاته.',
+    cancel: 'إلغاء',
+    old1: 'ملفات كبيرة لم تعدّلها منذ', old2: 'شهر، وأكبر من', mbUnit: 'ميجابايت', find: 'ابحث',
+    oldHint: 'يبحث في التنزيلات وسطح المكتب والمستندات والصور والفيديو والموسيقى.', oldNone: 'لا توجد ملفات قديمة كبيرة. كل شيء مرتب!',
+    looking: 'جارٍ البحث…', delSel: 'احذف المحدد', selAll: 'حدد الكل', selNone: 'ألغِ التحديد',
+    switchOn: 'اضغط على الملفات لتحديدها. الزر الأيمن لخيارات أكثر، ويعمل Del وShift+Del أيضًا.',
+    permOnly: 'لا يمكن التراجع عن هذا. المساحة تتحرر فورًا.',
+    menuSelect: 'حدده', menuUnselect: 'ألغِ تحديده', lookInsideShort: 'اعرض ما بداخله', openFile: 'افتحه',
+    toBinN: (n) => `انقل ${n} ملف لسلة المحذوفات`, delPermN: (n) => `احذف ${n} ملف نهائيًا`,
+    selected: (a, b, s) => `محدد <b>${a}</b> من ${b} · <b>${s}</b>`,
+    filesSize: (n, s) => `${n} ملف · ${s}`, showing: (n, all) => `يعرض أكبر ${n} من ${all}.`,
+    types: { img: 'صور', vid: 'فيديو', aud: 'صوتيات', doc: 'مستندات', zip: 'ملفات مضغوطة', exe: 'ملفات تثبيت', iso: 'صور أقراص', all: 'أكبر الملفات' },
+    otherPh: 'أنواع أخرى، مثل psd, blend', biggerThan: 'أكبر من',
+    typeHint: 'اختر نوعًا أو أكثر ثم اضغط <b>ابحث</b>. أو اختر <b>أكبر الملفات</b> لترى أكبر الملفات في القرص. يتخطى ويندوز والبرامج والكاش، فلا ترى إلا ملفاتك.',
+    typeNone: 'لا توجد ملفات من هذا النوع هنا.', typeLooking: (n) => `جارٍ البحث… فُحص ${n} ملف`, stoppedSearch: 'توقف البحث.', pickType: 'اختر نوعًا أولًا',
+    dup1: 'ملفات نسخ طبق الأصل من بعضها، أكبر من',
+    dupHint: 'يجد الملفات التي محتواها متطابق تمامًا حتى لو كانت أسماؤها مختلفة. يتخطى ويندوز والبرامج والكاش.',
+    dupNone: 'لا توجد ملفات مكررة. ممتاز!', dupListing: (n) => `جارٍ حصر الملفات… فُحص ${n}`, dupComparing: (d, t) => `جارٍ مقارنة المحتوى… ${d} من ${t}`,
+    dupGroup: (n, s, w) => `<b>${n} نسخ</b> · ${s} للواحدة · ${w} زيادة`, dupTotal: (n, w) => `${n} ملف له نسخ · <b>${w}</b> تشغلها النسخ الزائدة`,
+    selExtra: 'حدد النسخ الزائدة', keepOne: 'أبقِ نسخة واحدة على الأقل.',
+    cleanIntro: 'بقايا لا تحتاجها برامجك. ترجع من تلقاء نفسها، لذلك تنظيفها آمن دائمًا.',
+    adminNote: 'بعض العناصر تحتاج صلاحيات المسؤول لتنظيفها بالكامل.', adminBtn: 'أعد التشغيل كمسؤول',
+    cleanNow: 'نظّف الآن', measuring: 'جارٍ القياس…', toFree: (s) => `<b>${s}</b> يمكن تحريرها`, cleanQ: 'تنظيف الآن؟', clean: 'نظّف', cleaning: 'جارٍ التنظيف…',
+    binEmptied: 'سيتم إفراغ سلة المحذوفات: لا يمكن استرجاع تلك الملفات.',
+    scanningDisk: 'جارٍ فحص القرص', reading: 'يقرأ', filesRead: 'ملف مقروء', foundSoFar: 'وُجد حتى الآن', time: 'الوقت',
+    stopped: 'توقف الفحص', stoppedLong: 'توقف الفحص. اضغط <b>افحص</b> للبدء من جديد.',
+    secs: (s) => s < 60 ? s + ' ث' : Math.floor(s / 60) + ' د ' + (s % 60) + ' ث',
+    dateLocale: 'ar-u-nu-latn-ca-gregory', point: '👉',
+  },
+};
+let lang = 'en';
+const t = (k, ...a) => { const w = WORDS[lang][k]; return typeof w === 'function' ? w(...a) : w };
+const date = (iso) => iso ? new Date(iso.length > 10 ? iso : iso + 'T00:00:00').toLocaleDateString(t('dateLocale'), { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+const dateTime = (iso) => new Date(iso).toLocaleString(t('dateLocale'), { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+const VCOLOR = ['#ff6e6e', '#f7b246', '#6ea8ff', '#46d68c', '#969cac', '#c08cff'];
+
+// what each type means, by extension
+const TYPES = [
+  { k: 'img', icon: '🖼️', ext: 'jpg jpeg png gif bmp webp heic heif tif tiff raw cr2 cr3 nef arw dng psd svg' },
+  { k: 'vid', icon: '🎬', ext: 'mp4 mkv mov avi wmv webm m4v flv 3gp mts m2ts mpg mpeg vob' },
+  { k: 'aud', icon: '🎵', ext: 'mp3 wav flac aac m4a ogg wma opus aiff amr' },
+  { k: 'doc', icon: '📄', ext: 'pdf doc docx xls xlsx ppt pptx txt rtf odt ods odp csv epub' },
+  { k: 'zip', icon: '🗜️', ext: 'zip rar 7z tar gz bz2 xz tgz' },
+  { k: 'exe', icon: '📦', ext: 'exe msi msix appx appxbundle' },
+  { k: 'iso', icon: '💿', ext: 'iso img vhd vhdx vmdk' },
+  { k: 'all', icon: '🏔️', ext: '' },
+];
+
+let state = {
+  dir: null, items: [], sel: null, search: null, when: null,
+  olds: [], oldCount: 0, oldBusy: false,
+  typed: null, typeCount: 0, typeOn: new Set(['img']), typeBusy: false, typeStopped: false, typeProgress: 0,
+  dups: null, dupCount: 0, dupWasted: 0, dupBusy: false, dupStopped: false, dupMsg: null,
+  cleans: [], isAdmin: false, scanning: false, scanMsg: null, drives: [], usage: null,
+};
+
+function toast(text) { const el = $('toast'); el.textContent = text; el.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('on'), Math.max(3400, text.length * 60)) }
+
+/** A dialog. The last button is the main one: Enter picks it, Esc cancels. Resolves to the picked button's value, or false. */
+let closeDialog = null;
+function dialog({ title, text = '', warn = '', hint = '', buttons }) {
+  return new Promise((res) => {
+    $('mTitle').textContent = title; $('mText').textContent = text; $('mWarn').textContent = warn; $('mHint').textContent = hint;
+    const all = [{ label: t('cancel'), value: false }, ...buttons];
+    $('mActs').innerHTML = all.map((b, i) => `<button class="btn ${b.cls || ''}" data-i="${i}">${esc(b.label)}</button>`).join('');
+    $('modal').classList.add('on');
+    closeDialog = (v) => { $('modal').classList.remove('on'); closeDialog = null; res(v) };
+    $('mActs').onclick = (e) => { const b = e.target.closest('button'); if (b && closeDialog) closeDialog(all[+b.dataset.i].value) };
+    closeDialog.main = all[all.length - 1].value;
+    $('mActs').lastElementChild.focus();
+  });
+}
+const ask = ({ title, text, warn, yes }) => dialog({ title, text, warn, buttons: [{ label: yes, value: true, cls: 'primary' }] });
+
+/**
+ * Confirm a delete. mode 'choose' offers the Recycle Bin and permanent delete; 'bin' and 'perm' (the Delete and
+ * Shift+Delete keys) offer just that one. Anything that can't be recycled is never deleted for good without asking.
+ */
+function confirmDelete(files, { title, text, warn = '', mode = 'choose' }) {
+  const noBin = files.filter((f) => !f.recyclable).length, binOk = noBin < files.length;
+  const warns = [warn], buttons = [];
+  const perm = { label: t('delPerm'), value: 'perm', cls: 'solid-danger' }, bin = { label: t('toBin'), value: 'bin', cls: 'primary' };
+  let hint = '';
+  if (mode === 'perm' || !binOk) {
+    if (!binOk && mode !== 'perm') warns.push(t('noBinAll'));
+    hint = t('permOnly'); buttons.push({ ...perm, cls: 'primary-danger' });
+  } else {
+    if (noBin) warns.push(t('noBinSome', num(noBin)));
+    if (mode === 'choose') { hint = t('permHint'); buttons.push(perm) }
+    buttons.push(bin);
+  }
+  return dialog({ title, text, warn: warns.filter(Boolean).join('\n'), hint, buttons });
+}
+
+// ---------------- right-click menu ----------------
+let menuEl = null;
+function closeMenu() { menuEl?.remove(); menuEl = null }
+/** items: [{icon, label, key, red, disabled, run}] or '-' for a line. */
+function openMenu(x, y, items) {
+  closeMenu();
+  menuEl = document.createElement('div');
+  menuEl.className = 'menu';
+  menuEl.innerHTML = items.map((it, i) => it === '-' ? '<hr>' :
+    `<button data-i="${i}" ${it.disabled ? 'disabled' : ''} class="${it.red ? 'red' : ''}"><span class="i">${it.icon || ''}</span>${esc(it.label)}${it.key ? `<kbd>${it.key}</kbd>` : ''}</button>`).join('');
+  document.body.appendChild(menuEl);
+  const r = menuEl.getBoundingClientRect();
+  const rtl = lang === 'ar';
+  let left = rtl ? x - r.width : x;
+  left = Math.max(8, Math.min(left, innerWidth - r.width - 8));
+  menuEl.style.left = left + 'px';
+  menuEl.style.top = Math.max(8, Math.min(y, innerHeight - r.height - 8)) + 'px';
+  menuEl.onclick = (e) => { const b = e.target.closest('button'); if (!b) return; const it = items[+b.dataset.i]; closeMenu(); it.run() };
+}
+addEventListener('mousedown', (e) => { if (menuEl && !menuEl.contains(e.target)) closeMenu() }, true);
+addEventListener('blur', closeMenu); addEventListener('resize', () => { closeMenu(); moveInd() });
+document.addEventListener('scroll', closeMenu, true);
+document.addEventListener('contextmenu', (e) => e.preventDefault());
+
+// ---------------- language ----------------
+function applyLang() {
+  document.documentElement.lang = lang;
+  document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+  document.querySelectorAll('[data-t]').forEach((el) => el.innerHTML = t(el.dataset.t));
+  $('lang').textContent = t('langBtn');
+  $('back').textContent = lang === 'ar' ? '→' : '←';
+  $('other').placeholder = t('otherPh'); $('search').placeholder = t('searchPh');
+  $('scan').textContent = t(state.scanning ? 'stop' : 'scan');
+  renderDrives(); setUsage(state.usage); renderWhen(); renderTypes(); renderTyped(); renderDups(); renderOld(); renderClean();
+  if (state.scanning && state.scanMsg) { $('sv')?.remove(); scanning(state.scanMsg) }
+  else if (state.search) renderSearch(state.search, state.sel);
+  else if (state.dir) renderDir(state.dir, state.sel); else renderExploreEmpty();
+  requestAnimationFrame(moveInd);
+}
+$('lang').onclick = () => { lang = lang === 'ar' ? 'en' : 'ar'; send('lang', { lang }); applyLang() };
+$('star').onclick = () => send('link', { to: 'star' });
+
+// Ko-fi's donation panel, loaded only when opened
+const KOFI = 'https://ko-fi.com/iizhq55/?hidefeed=true&widget=true&embed=true';
+function toggleKofi(open) {
+  $('kofi').classList.toggle('open', open);
+  if (open && !$('kofiPanel').querySelector('iframe')) {
+    const f = document.createElement('iframe');
+    f.src = KOFI; f.title = 'Ko-fi'; f.referrerPolicy = 'no-referrer';
+    f.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox');
+    $('kofiPanel').appendChild(f);
+  }
+}
+$('kofiBtn').onclick = () => toggleKofi(!$('kofi').classList.contains('open'));
+$('kofiX').onclick = () => toggleKofi(false);
+
+// ---------------- tabs ----------------
+function moveInd() {
+  const b = document.querySelector('#tabs button.on'); if (!b) return;
+  $('ind').style.transform = `translateX(${b.offsetLeft}px)`; $('ind').style.width = b.offsetWidth + 'px';
+}
+$('tabs').onclick = (e) => {
+  const b = e.target.closest('button'); if (!b || b.classList.contains('on')) return;
+  closeMenu();
+  document.querySelectorAll('#tabs button').forEach((x) => x.classList.toggle('on', x === b));
+  document.querySelectorAll('.page').forEach((p) => p.classList.toggle('on', p.id === 'p' + b.dataset.p));
+  moveInd();
+};
+
+// ---------------- drive + usage ----------------
+const driveName = (d) => d.letter ? t('drive', d.letter) : t('userFolder');
+function renderDrives() {
+  const v = $('drive').value;
+  $('drive').innerHTML = state.drives.map((d) => `<option value="${esc(d.path)}">${esc(driveName(d))}</option>`).join('');
+  if (v) $('drive').value = v;
+  const cur = state.drives.find((d) => d.path === $('drive').value) || state.drives[0];
+  document.querySelectorAll('.where-label').forEach((el) => el.textContent = cur ? t('searchIn', driveName(cur)) : '');
+}
+function setUsage(u) {
+  state.usage = u;
+  if (!u || u.total <= 0) { $('free').textContent = u ? driveName(u) : '—'; $('of').textContent = t('pressScanUsage'); $('meter').style.width = '0'; return }
+  const f = u.used / u.total;
+  $('free').textContent = t('free', human(u.total - u.used));
+  $('of').textContent = t('usedOf', human(u.used), human(u.total));
+  const m = $('meter'); m.style.width = (f * 100).toFixed(1) + '%'; m.className = f > .9 ? 'full' : f > .75 ? 'warn' : '';
+}
+$('drive').onchange = () => { send('usage', { path: $('drive').value }); renderDrives() };
+$('scan').onclick = () => state.scanning ? send('cancel') : send('scan', { path: $('drive').value });
+
+// ---------------- explore ----------------
+function renderWhen() { $('when').textContent = state.when ? t('scannedAt', dateTime(state.when)) : '' }
+function renderExploreEmpty() {
+  state.dir = null; state.items = []; state.search = null;
+  $('path').textContent = t('pathHint'); $('total').textContent = ''; $('back').disabled = true; $('search').disabled = true;
+  $('list').innerHTML = `<div class="empty"><div class="em">🔍</div>${t('exploreEmpty')}</div>`;
+  renderSide(null);
+}
+const itemName = (n) => n.isGroup ? t('small', num(n.files)) : n.name;
+/** Fade-in for the first rows only (what's on screen); the rest just appear, so long lists stay instant. */
+// used inside class="…${enter(i)}": closes the class and adds the delay, e.g. class="item enter" style="--i:3"
+const enter = (i) => i < 16 ? ` enter" style="--i:${i}` : '';
+
+/**
+ * Show a long list a page at a time: the first rows right away, the next ones as the user scrolls near the end.
+ * renderRange(a, b) returns the HTML for items a..b-1. container.ensure(i) makes sure item i is on the page.
+ */
+function pager(container, total, renderRange, step = 150) {
+  container.io?.disconnect();
+  let shown = 0;
+  const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) add() }, { root: container, rootMargin: '800px' });
+  function add() {
+    container.querySelector(':scope > .more')?.remove();
+    const end = Math.min(total, shown + step);
+    container.insertAdjacentHTML('beforeend', renderRange(shown, end));
+    shown = end;
+    if (shown < total) { const s = document.createElement('div'); s.className = 'more'; container.appendChild(s); io.observe(s) }
+  }
+  container.io = io;
+  container.ensure = (i) => { while (shown <= i && shown < total) add() };
+  add();
+}
+function showItems(items, keep, withWhere) {
+  state.items = items; state.sel = null;
+  const max = Math.max(1, ...items.map((n) => n.size));
+  const total = state.search ? max : Math.max(1, state.dir.size);
+  const row = (n, i) => `
+    <div class="item${enter(i)}" data-i="${i}">
+      <div class="ico">${n.isDir ? '📁' : n.isGroup ? '⋯' : '📄'}</div>
+      <div class="name">${esc(itemName(n))}${withWhere && n.where ? `<small>${esc(n.where)}</small>` : ''}</div>
+      <div class="size">${human(n.size)}</div>
+      <div class="share"><b style="width:${Math.max(1, n.size / total * 100).toFixed(1)}%"></b></div>
+      <div><span class="chip v${n.verdict}">${t('verdicts')[n.verdict]}</span></div>
+    </div>`;
+  $('list').scrollTop = 0;
+  if (items.length) { $('list').innerHTML = ''; pager($('list'), items.length, (a, b) => items.slice(a, b).map((n, j) => row(n, a + j)).join('')) }
+  else { $('list').io?.disconnect(); $('list').innerHTML = `<div class="empty"><div class="em">✨</div>${t(state.search ? 'searchNone' : 'folderEmpty')}</div>` }
+  if (items.length) select(Math.min(keep ?? 0, items.length - 1)); else renderSide(null);
+}
+function renderDir(d, keep = 0) {
+  state.dir = d; state.search = null; $('search').disabled = false; $('path').classList.remove('plain');
+  $('path').textContent = '‎' + d.path + '‎'; $('total').textContent = human(d.size); $('back').disabled = !d.hasParent;
+  showItems(d.children, keep, false);
+}
+function renderSearch(s, keep = 0) {
+  state.search = s; $('path').classList.add('plain');
+  $('path').textContent = t('searchTitle', num(s.children.length), s.q); $('total').textContent = ''; $('back').disabled = false;
+  showItems(s.children, keep, true);
+}
+function select(i, scroll = true) {
+  state.sel = i;
+  // touch only the old and the new row, not every row in the folder
+  $('list').querySelector('.item.sel')?.classList.remove('sel');
+  $('list').ensure?.(i);
+  const row = $('list').querySelector(`.item[data-i="${i}"]`);
+  row?.classList.add('sel');
+  if (scroll) row?.scrollIntoView({ block: 'nearest' });
+  renderSide(state.items[i]);
+}
+
+/** The folder as a ring: each slice is one item, coloured by its label; the selected one stands out. */
+function donut(items, total, sel) {
+  const R = 44, C = 2 * Math.PI * R;
+  let start = 0, rest = 0, segs = '';
+  items.forEach((n, i) => {
+    const f = n.size / total;
+    if (f < 0.006 || i >= 40) { rest += f; return }
+    const len = f * C, gap = Math.min(2, len * 0.3);
+    segs += `<circle class="seg" data-i="${i}" r="${R}" cx="56" cy="56" fill="none" stroke="${VCOLOR[n.verdict]}" stroke-width="16"
+      stroke-dasharray="${Math.max(0.5, len - gap)} ${C}" stroke-dashoffset="${-start * C}" opacity="${sel == null || sel === i ? 1 : .35}"><title>${esc(itemName(n))}</title></circle>`;
+    start += f;
+  });
+  if (rest > 0) segs += `<circle r="${R}" cx="56" cy="56" fill="none" stroke="#3a4058" stroke-width="16" stroke-dasharray="${rest * C} ${C}" stroke-dashoffset="${-start * C}" opacity=".6"><title>${esc(t('other'))}</title></circle>`;
+  return `<svg class="donut" viewBox="0 0 112 112"><circle r="${R}" cx="56" cy="56" fill="none" stroke="#20253a" stroke-width="16"/>
+    <g transform="rotate(-90 56 56)">${segs}</g><text x="56" y="60" direction="ltr">${esc(human(total).replace(/[⁦⁩]/g, ''))}</text></svg>`;
+}
+
+const cantDelete = (n) => !n.deletable || n.hiberfil;
+async function delNode(n, mode) {
+  if (!n || cantDelete(n)) return;
+  const warn = n.verdict === 5 ? t('appWarn') : n.verdict === 1 || n.verdict === 4 ? t('unsure') : '';
+  const picked = await confirmDelete([n], { title: t('delQ1', itemName(n)), text: human(n.size), warn, mode });
+  if (picked) send('remove', { id: n.id, mode: picked });
+}
+async function hibOff(n) { if (await ask({ title: t('hibQ'), text: t('hibText', human(n.size)), yes: t('hibYes') })) send('hibernateOff') }
+
+function renderSide(n) {
+  if (!n) { $('side').innerHTML = `<div class="empty"><div class="em">${t('point')}</div>${t('sideEmpty')}</div>`; return }
+  const isApp = n.verdict === 5;
+  const ring = !state.search && state.dir ? donut(state.items, Math.max(1, state.dir.size), state.sel) : '';
+  $('side').innerHTML = `
+    <div class="head">${ring}<div>
+      <span class="chip v${n.verdict}">${t('verdicts')[n.verdict]}</span>
+      <h3>${esc(itemName(n))}</h3>
+      <div class="big">${human(n.size)}</div>
+    </div></div>
+    <p>${esc(lang === 'ar' ? n.whatAr : n.what)}</p>
+    <div class="meta">${n.isDir ? t('nFiles', num(n.files)) + ' · ' : ''}${n.lastUsed ? t('lastChanged', date(n.lastUsed)) : ''}</div>
+    <div class="actions">
+      ${n.isDir ? `<button class="btn primary" id="go">${t('lookInside')}</button>` : ''}
+      ${!n.isDir && !n.isGroup && !n.hiberfil ? `<button class="btn primary" id="launch">▶ ${t('openFile')}</button>` : ''}
+      ${n.hiberfil ? `<button class="btn primary" id="hib">${t('hibOff')}</button>` : ''}
+      ${isApp ? `<button class="btn" id="apps">${t('uninstall')}</button>` : ''}
+      <button class="btn" id="open">${t(n.isDir || n.isGroup ? 'openFolder' : 'showInFolder')}</button>
+      <button class="btn danger" id="del" ${cantDelete(n) ? 'disabled' : ''}>${t('del')}</button>
+    </div>`;
+  $('side').querySelectorAll('.seg').forEach((c) => c.onclick = () => select(+c.dataset.i));
+  if ($('go')) $('go').onclick = () => send('open', { id: n.id });
+  if ($('launch')) $('launch').onclick = () => activate(n);
+  if ($('apps')) $('apps').onclick = () => send('apps');
+  if ($('hib')) $('hib').onclick = () => hibOff(n);
+  $('open').onclick = () => send('explorer', { id: n.id });
+  $('del').onclick = () => delNode(n, 'choose');
+}
+function nodeMenu(n) {
+  const items = [];
+  if (n.isDir) items.push({ icon: '📂', label: t('lookInsideShort'), key: 'Enter', run: () => send('open', { id: n.id }) });
+  else if (!n.isGroup) items.push({ icon: '▶', label: t('openFile'), key: 'Enter', run: () => activate(n) });
+  items.push({ icon: '↗', label: t(n.isDir || n.isGroup ? 'openFolder' : 'showInFolder'), run: () => send('explorer', { id: n.id }) });
+  if (n.verdict === 5) items.push({ icon: '🧩', label: t('uninstall'), run: () => send('apps') });
+  if (n.hiberfil) items.push({ icon: '💤', label: t('hibOff'), run: () => hibOff(n) });
+  items.push('-');
+  items.push({ icon: '🗑️', label: t('toBin'), key: 'Del', disabled: cantDelete(n), run: () => delNode(n, 'bin') });
+  items.push({ icon: '✖', label: t('delPerm'), key: 'Shift+Del', red: true, disabled: cantDelete(n), run: () => delNode(n, 'perm') });
+  return items;
+}
+$('list').onclick = (e) => { const it = e.target.closest('.item'); if (it) select(+it.dataset.i) };
+/** Double-click / Enter: go into a folder, or open a file with its own program (a video plays, a picture opens). */
+function activate(n) {
+  if (!n) return;
+  if (n.isDir) send('open', { id: n.id });
+  else if (n.isGroup) send('explorer', { id: n.id });
+  else send('launch', { id: n.id });
+}
+$('list').ondblclick = (e) => { const it = e.target.closest('.item'); if (it) activate(state.items[+it.dataset.i]) };
+$('list').oncontextmenu = (e) => {
+  const it = e.target.closest('.item'); if (!it) return;
+  select(+it.dataset.i, false);
+  openMenu(e.clientX, e.clientY, nodeMenu(state.items[+it.dataset.i]));
+};
+$('back').onclick = () => { if (state.search) { $('search').value = ''; renderDir(state.dir) } else if (state.dir?.hasParent) send('up', { id: state.dir.id }) };
+$('search').onkeydown = (e) => {
+  if (e.key === 'Enter' && $('search').value.trim()) send('search', { q: $('search').value.trim() });
+  if (e.key === 'Escape') { $('search').value = ''; if (state.search) renderDir(state.dir) }
+};
+
+// ---------------- file lists (old files, custom and duplicates share the same look) ----------------
+const CHECK = '<div class="check"><svg viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7"/></svg></div>';
+const LISTS = {
+  olds: { card: 'olds', page: 'p1', cmd: 'removeOld', get: () => state.olds || [], foot: () => footer(state.olds || [], state.oldCount, 'oldSum', 'allOld', 'delOld') },
+  typed: { card: 'typed', page: 'p2', cmd: 'removeType', get: () => state.typed || [], foot: () => footer(state.typed || [], state.typeCount, 'typeSum', 'allType', 'delType') },
+  dups: { card: 'dups', page: 'p3', cmd: 'removeDup', get: () => dupFiles(), foot: () => dupFoot(),
+    // never let every copy of a file be selected
+    guard: (f) => state.dups[f.g].filter((x) => x.on).length < state.dups[f.g].length - 1 },
+};
+function fileRow(f, i) {
+  return `
+    <div class="row2 pick${f.on ? ' on' : ''}${enter(i)}" data-i="${i}">
+      ${CHECK}
+      <div class="name">${esc(f.name)}</div>
+      <div class="size">${human(f.size)}</div>
+      <div class="when">${date(f.lastUsed)}</div>
+      <button class="reveal" title="${esc(t('showInFolder'))}">↗</button>
+      <div class="where">${esc(f.dir)}</div>
+    </div>`;
+}
+function footer(list, count, sumEl, allEl, delEl) {
+  const on = list.filter((f) => f.on);
+  const more = count > list.length ? ' · ' + t('showing', num(list.length), num(count)) : '';
+  $(sumEl).innerHTML = list.length ? t('selected', num(on.length), num(list.length), human(sum(on))) + more : t('switchOn');
+  if (allEl) { $(allEl).textContent = t(list.length && on.length === list.length ? 'selNone' : 'selAll'); $(allEl).disabled = !list.length }
+  $(delEl).disabled = !on.length;
+}
+/** Select or unselect one row, in place (no re-render, so only that row animates). */
+function setOn(key, i, v) {
+  const L = LISTS[key], f = L.get()[i];
+  if (!f || f.on === v) return true;
+  if (v && L.guard && !L.guard(f)) { toast(t('keepOne')); return false }
+  f.on = v;
+  $(L.card).querySelector(`.row2[data-i="${i}"]`)?.classList.toggle('on', v);
+  return true;
+}
+function setAll(key, v) { LISTS[key].get().forEach((_, i) => setOn(key, i, v)); LISTS[key].foot() }
+function fillList(card, list) {
+  card.scrollTop = 0; card.innerHTML = ''; card.ensureFile = null;
+  pager(card, list.length, (a, b) => list.slice(a, b).map((f, j) => fileRow(f, a + j)).join(''));
+}
+function setMessage(card, html) { card.io?.disconnect(); card.ensure = card.ensureFile = null; card.innerHTML = html }
+function focusRow(key, i, scroll = false) {
+  const L = LISTS[key]; L.focus = i;
+  const c = $(L.card); c.ensureFile ? c.ensureFile(i) : c.ensure?.(i);
+  $(L.card).querySelectorAll('.pick.focus').forEach((r) => r.classList.remove('focus'));
+  const row = $(L.card).querySelector(`.row2[data-i="${i}"]`);
+  row?.classList.add('focus'); if (scroll) row?.scrollIntoView({ block: 'nearest' });
+}
+async function deleteFiles(key, files, mode) {
+  if (!files.length) return;
+  const title = files.length === 1 ? t('delQ1', files[0].name) : t('delQN', num(files.length));
+  const picked = await confirmDelete(files, { title, text: t('filesSize', num(files.length), human(sum(files))), mode });
+  if (picked) send(LISTS[key].cmd, { paths: files.map((f) => f.path), mode: picked });
+}
+/** What Delete acts on: the selected files, or the focused one if none is selected (like Explorer). */
+function deleteTargets(key) {
+  const L = LISTS[key], list = L.get(), on = list.filter((f) => f.on);
+  return on.length ? on : L.focus != null && list[L.focus] ? [list[L.focus]] : [];
+}
+function setupList(key) {
+  const L = LISTS[key], card = $(L.card);
+  card.onclick = (e) => {
+    const row = e.target.closest('.row2'); if (!row) return;
+    const i = +row.dataset.i, list = L.get();
+    if (e.target.closest('.reveal')) { send('reveal', { path: list[i].path }); return }
+    if (e.shiftKey && L.focus != null) { for (let j = Math.min(L.focus, i); j <= Math.max(L.focus, i); j++) if (!setOn(key, j, true)) break }
+    else setOn(key, i, !list[i].on);
+    focusRow(key, i); L.foot();
+  };
+  // double-click opens the file (the two clicks before it cancel each other's selection change)
+  card.ondblclick = (e) => {
+    const row = e.target.closest('.row2'); if (!row || e.target.closest('.reveal')) return;
+    send('launchPath', { path: L.get()[+row.dataset.i].path });
+  };
+  card.oncontextmenu = (e) => {
+    const row = e.target.closest('.row2'); if (!row) return;
+    const i = +row.dataset.i, f = L.get()[i];
+    focusRow(key, i);
+    const targets = f.on ? L.get().filter((x) => x.on) : [f];
+    openMenu(e.clientX, e.clientY, [
+      { icon: '▶', label: t('openFile'), key: 'Enter', run: () => send('launchPath', { path: f.path }) },
+      { icon: f.on ? '☐' : '☑', label: t(f.on ? 'menuUnselect' : 'menuSelect'), key: 'Space', run: () => { setOn(key, i, !f.on); L.foot() } },
+      { icon: '↗', label: t('showInFolder'), run: () => send('reveal', { path: f.path }) },
+      '-',
+      { icon: '🗑️', label: targets.length > 1 ? t('toBinN', num(targets.length)) : t('toBin'), key: 'Del', run: () => deleteFiles(key, targets, 'bin') },
+      { icon: '✖', label: targets.length > 1 ? t('delPermN', num(targets.length)) : t('delPerm'), key: 'Shift+Del', red: true, run: () => deleteFiles(key, targets, 'perm') },
+    ]);
+  };
+}
+const busyBox = (text) => `<div class="empty pad"><div class="spin" style="margin:0 auto 12px"></div><span class="busyText">${text}</span><div class="now busyNow"></div></div>`;
+
+// ---- old files ----
+$('find').onclick = () => { state.oldBusy = true; renderOld(); send('findOld', { months: +$('months').value || 6, mb: +$('mb').value || 10 }) };
+function renderOld() {
+  const list = state.olds;
+  $('find').disabled = state.oldBusy; LISTS.olds.focus = null;
+  if (!state.oldBusy && list?.length) fillList($('olds'), list);
+  else setMessage($('olds'), state.oldBusy ? busyBox(t('looking'))
+    : list === null ? `<div class="empty pad"><div class="em">🎉</div>${t('oldNone')}</div>`
+    : `<div class="empty pad"><div class="em">🗂️</div>${t('oldHint')}</div>`);
+  LISTS.olds.foot();
+}
+$('allOld').onclick = () => setAll('olds', !state.olds.every((f) => f.on));
+$('delOld').onclick = () => deleteFiles('olds', state.olds.filter((f) => f.on), 'choose');
+setupList('olds');
+
+// ---- custom: find by type ----
+function renderTypes() {
+  $('types').innerHTML = TYPES.map((x) => `<button class="type ${state.typeOn.has(x.k) ? 'on' : ''} ${x.k === 'all' ? 'sep' : ''}" data-k="${x.k}"><span>${x.icon}</span>${t('types')[x.k]}</button>`).join('');
+}
+$('types').onclick = (e) => {
+  const b = e.target.closest('.type'); if (!b) return; const k = b.dataset.k;
+  // "Biggest files" means every type, so it can't be combined with the others
+  if (k === 'all') state.typeOn = new Set(state.typeOn.has('all') ? [] : ['all']);
+  else { state.typeOn.delete('all'); state.typeOn.has(k) ? state.typeOn.delete(k) : state.typeOn.add(k) }
+  renderTypes();
+};
+function chosenExts() {
+  const exts = new Set();
+  TYPES.filter((x) => state.typeOn.has(x.k) && x.ext).forEach((x) => x.ext.split(' ').forEach((e) => exts.add('.' + e)));
+  $('other').value.split(/[\s,،;]+/).map((e) => e.trim().replace(/^\*?\.?/, '').toLowerCase()).filter((e) => /^[a-z0-9]{1,12}$/.test(e)).forEach((e) => exts.add('.' + e));
+  return [...exts];
+}
+$('findType').onclick = () => {
+  if (state.typeBusy) { send('cancelType'); return }
+  const all = state.typeOn.has('all'), exts = chosenExts();
+  if (!all && !exts.length) { toast(t('pickType')); return }
+  state.typeBusy = true; state.typeProgress = 0; renderTyped();
+  send('findType', { exts, all, mb: Math.max(0, +$('typeMb').value || 0), path: $('drive').value });
+};
+$('other').onkeydown = (e) => { if (e.key === 'Enter') $('findType').click() };
+function renderTyped() {
+  const list = state.typed;
+  $('findType').textContent = t(state.typeBusy ? 'stop' : 'find'); LISTS.typed.focus = null;
+  if (!state.typeBusy && list?.length) fillList($('typed'), list);
+  else setMessage($('typed'), state.typeBusy ? busyBox(t('typeLooking', num(state.typeProgress)))
+    : list === null ? `<div class="empty pad"><div class="em">🧭</div>${t('typeHint')}</div>`
+    : `<div class="empty pad"><div class="em">🔎</div>${state.typeStopped ? t('stoppedSearch') : t('typeNone')}</div>`);
+  LISTS.typed.foot();
+}
+$('allType').onclick = () => setAll('typed', !state.typed.every((f) => f.on));
+$('delType').onclick = () => deleteFiles('typed', state.typed.filter((f) => f.on), 'choose');
+setupList('typed');
+
+// ---- duplicates ----
+$('findDup').onclick = () => {
+  if (state.dupBusy) { send('cancelDup'); return }
+  state.dupBusy = true; state.dupMsg = null; renderDups();
+  send('findDup', { mb: Math.max(0, +$('dupMb').value || 0), path: $('drive').value });
+};
+const dupFiles = () => (state.dups || []).flat();
+function dupBusyText() {
+  const m = state.dupMsg;
+  return !m || m.phase === 1 ? t('dupListing', num(m?.done)) : t('dupComparing', num(m.done), num(m.total));
+}
+function renderDups() {
+  const groups = state.dups;
+  $('findDup').textContent = t(state.dupBusy ? 'stop' : 'find'); LISTS.dups.focus = null;
+  if (!state.dupBusy && groups?.length) {
+    // groups are shown a page at a time; each row keeps its index in the flat list of files
+    const start = []; let k = 0; groups.forEach((g) => { start.push(k); k += g.length });
+    const card = $('dups'); card.scrollTop = 0; card.innerHTML = '';
+    pager(card, groups.length, (a, b) => groups.slice(a, b).map((g, j) => `<div class="group${enter(a + j)}"><h4>📑 ${t('dupGroup', g.length, human(g[0].size), human(g[0].size * (g.length - 1)))}</h4>
+      ${g.map((f, x) => fileRow(f, start[a + j] + x)).join('')}</div>`).join(''), 40);
+    card.ensureFile = (i) => { const gi = start.findLastIndex((s) => s <= i); card.ensure(gi) };
+  } else setMessage($('dups'), state.dupBusy ? busyBox(dupBusyText())
+    : groups === null ? `<div class="empty pad"><div class="em">👯</div>${t('dupHint')}</div>`
+    : `<div class="empty pad"><div class="em">🎉</div>${state.dupStopped ? t('stoppedSearch') : t('dupNone')}</div>`);
+  dupFoot();
+}
+function dupFoot() {
+  const groups = state.dups, all = dupFiles(), on = all.filter((f) => f.on);
+  $('dupSum').innerHTML = !groups?.length ? '' : on.length ? t('selected', num(on.length), num(all.length), human(sum(on))) : t('dupTotal', num(state.dupCount), human(state.dupWasted));
+  $('delDup').disabled = !on.length; $('extraDup').disabled = !groups?.length;
+}
+$('extraDup').onclick = () => {
+  // keep the oldest copy of each file, select the rest
+  dupFiles().forEach((f, i) => setOn('dups', i, false));
+  let k = 0; state.dups.forEach((g) => g.forEach((f, j) => { if (j > 0) setOn('dups', k, true); k++ }));
+  dupFoot();
+};
+$('delDup').onclick = () => deleteFiles('dups', dupFiles().filter((f) => f.on), 'choose');
+setupList('dups');
+
+// ---------------- quick clean ----------------
+function renderClean() {
+  const list = state.cleans;
+  $('adminNote').style.display = !state.isAdmin && list.some((c) => c.needsAdmin && c.size > 0) ? '' : 'none';
+  if (!list.length) { $('cleans').innerHTML = ''; $('cleanSum').textContent = t('measuring'); return }
+  $('cleans').innerHTML = list.map((c, i) => `
+    <div class="row3 pick${c.on ? ' on' : ''}${enter(i)}" data-i="${i}">
+      ${CHECK}
+      <div><div style="font-weight:600">${esc(lang === 'ar' ? c.nameAr : c.name)}</div><p>${esc(lang === 'ar' ? c.whatAr : c.what)}</p></div>
+      <div class="size">${human(c.size)}</div>
+    </div>`).join('');
+  cleanFoot();
+}
+function cleanFoot() {
+  const total = state.cleans.filter((c) => c.on).reduce((a, c) => a + c.size, 0);
+  $('cleanSum').innerHTML = t('toFree', human(total));
+  $('clean').disabled = !total;
+}
+$('cleans').onclick = (e) => {
+  const row = e.target.closest('.row3'); if (!row) return;
+  const c = state.cleans[+row.dataset.i]; c.on = !c.on; row.classList.toggle('on', c.on); cleanFoot();
+};
+$('clean').onclick = async () => {
+  const on = state.cleans.filter((c) => c.on);
+  const bin = on.some((c) => c.isRecycleBin);
+  if (await ask({ title: t('cleanQ'), text: on.map((c) => '• ' + (lang === 'ar' ? c.nameAr : c.name)).join('\n'), warn: bin ? t('binEmptied') : '', yes: t('clean') }))
+    { $('clean').disabled = true; $('cleanSum').textContent = t('cleaning'); send('clean', { names: on.map((c) => c.name) }) }
+};
+
+// ---------------- keyboard (works like File Explorer) ----------------
+const activeList = () => Object.keys(LISTS).find((k) => $(LISTS[k].page).classList.contains('on'));
+document.addEventListener('keydown', (e) => {
+  if (closeDialog) {
+    if (e.key === 'Escape') { e.preventDefault(); closeDialog(false) }
+    else if (e.key === 'Enter') { e.preventDefault(); closeDialog(closeDialog.main) }
+    return;
+  }
+  if (menuEl) { if (e.key === 'Escape') closeMenu(); return }
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  const del = e.key === 'Delete', perm = del && e.shiftKey;
+  // Explore
+  if ($('p0').classList.contains('on') && state.items.length) {
+    const k = state.items.length, n = state.items[state.sel];
+    if (e.key === 'ArrowDown') { select(Math.min(k - 1, (state.sel ?? -1) + 1)); e.preventDefault() }
+    else if (e.key === 'ArrowUp') { select(Math.max(0, (state.sel ?? 1) - 1)); e.preventDefault() }
+    else if (e.key === 'Enter') activate(n);
+    else if (e.key === 'Backspace') $('back').click();
+    else if (del) { e.preventDefault(); delNode(n, perm ? 'perm' : 'bin') }
+    return;
+  }
+  // file lists
+  const key = activeList(); if (!key) return;
+  const L = LISTS[key], list = L.get(); if (!list.length) return;
+  if (del) { e.preventDefault(); deleteFiles(key, deleteTargets(key), perm ? 'perm' : 'bin') }
+  else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') { e.preventDefault(); key === 'dups' ? $('extraDup').click() : setAll(key, true) }
+  else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); focusRow(key, Math.max(0, Math.min(list.length - 1, (L.focus ?? -1) + (e.key === 'ArrowDown' ? 1 : -1))), true) }
+  else if (e.key === ' ' && L.focus != null) { e.preventDefault(); setOn(key, L.focus, !list[L.focus].on); L.foot() }
+  else if (e.key === 'Enter' && L.focus != null) send('launchPath', { path: list[L.focus].path });
+});
+$('admin').onclick = () => send('admin');
+
+// ---------------- live scan view ----------------
+function scanning(m) {
+  state.scanning = m.on; $('scan').textContent = t(m.on ? 'stop' : 'scan');
+  if (!m.on) {
+    state.scanMsg = null;
+    if ($('sv')) { $('path').textContent = t('stopped'); $('list').innerHTML = `<div class="empty"><div class="em">⏸️</div>${t('stoppedLong')}</div>` }
+    return;
+  }
+  state.scanMsg = m;
+  if (!$('sv')) {
+    document.querySelector('#tabs button[data-p="0"]').click();
+    state.items = []; state.search = null;
+    $('path').textContent = t('scanningDisk'); $('total').textContent = ''; $('when').textContent = ''; $('back').disabled = true; $('search').disabled = true;
+    renderSide(null);
+    $('list').innerHTML = `<div class="scanview" id="sv">
+      <div class="pct" id="svPct">0<small>%</small></div>
+      <div class="meter" id="svMeter"><b id="svBar" style="width:0"></b></div>
+      <div class="now">${t('reading')} <b id="svNow">…</b></div>
+      <div class="stats">
+        <div class="stat"><b id="svFiles">0</b><span>${t('filesRead')}</span></div>
+        <div class="stat"><b id="svBytes">0 B</b><span>${t('foundSoFar')}</span></div>
+        <div class="stat"><b id="svTime">0</b><span>${t('time')}</span></div>
+      </div></div>`;
+  }
+  const known = m.expected > 0;
+  $('svMeter').classList.toggle('indet', !known);
+  if (known) {
+    const p = Math.min(99, Math.floor(m.bytes / m.expected * 100));
+    $('svPct').innerHTML = p + '<small>%</small>';
+    $('svBar').style.width = p + '%';
+  } else $('svPct').innerHTML = human(m.bytes || 0);
+  $('svNow').textContent = ltr(m.path || '…');
+  $('svFiles').textContent = num(m.files);
+  $('svBytes').textContent = human(m.bytes || 0);
+  $('svTime').textContent = t('secs', m.secs || 0);
+}
+function busyUpdate(card, text, path) {
+  const box = $(card); if (!box.querySelector('.busyText')) return;
+  box.querySelector('.busyText').textContent = text;
+  if (path != null) box.querySelector('.busyNow').textContent = ltr(path);
+}
+
+// ---------------- messages from the app ----------------
+window.chrome.webview.addEventListener('message', (e) => {
+  const m = e.data;
+  switch (m.type) {
+    case 'lang': lang = m.lang === 'ar' ? 'ar' : 'en'; applyLang(); break;
+    case 'drives': state.drives = m.drives; renderDrives(); setUsage(m.usage); break;
+    case 'usage': setUsage(m.usage); break;
+    case 'scanning': scanning(m); break;
+    case 'scanInfo': state.when = m.when; renderWhen(); break;
+    case 'noScan': state.when = null; renderWhen(); if (!state.scanning) renderExploreEmpty(); break;
+    case 'dir': $('search').value = ''; renderDir(m.dir, state.dir && state.dir.id === m.dir.id && !state.search ? state.sel : 0); break;
+    case 'search': renderSearch(m); break;
+    case 'old': state.oldBusy = false; state.oldCount = m.count; state.olds = m.files.length ? m.files.map((f) => ({ ...f, on: false })) : null; renderOld(); break;
+    case 'typed': state.typeBusy = false; state.typeStopped = false; state.typeCount = m.count; state.typed = m.files.map((f) => ({ ...f, on: false })); renderTyped(); break;
+    case 'typeProgress': state.typeProgress = m.files; busyUpdate('typed', t('typeLooking', num(m.files)), m.path); break;
+    case 'typeStopped': state.typeBusy = false; state.typeStopped = true; state.typed = []; state.typeCount = 0; renderTyped(); break;
+    case 'dups': state.dupBusy = false; state.dupStopped = false; state.dupCount = m.count; state.dupWasted = m.wasted; state.dups = m.groups.map((g, gi) => g.files.map((f) => ({ ...f, on: false, g: gi }))); renderDups(); break;
+    case 'dupProgress': state.dupMsg = m; busyUpdate('dups', dupBusyText()); break;
+    case 'dupStopped': state.dupBusy = false; state.dupStopped = true; state.dups = []; renderDups(); break;
+    case 'cleans': state.isAdmin = m.isAdmin; state.cleans = m.targets.map((c) => ({ ...c, on: c.size > 0 && !c.isRecycleBin })); renderClean(); break;
+    case 'toast': toast(m.text); break;
+  }
+});
+applyLang();
+send('ready');
+</script>
+</body>
+</html>
