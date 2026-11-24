@@ -50,5 +50,5 @@ jobs:
           gh release create "$GITHUB_REF_NAME" Spacewise.exe \
             --repo "$GITHUB_REPOSITORY" \
             --title "Spacewise $GITHUB_REF_NAME" \
-            --notes "Download **Spacewise.exe** below and run it. See the [code signing policy](https://github.com/$GITHUB_REPOSITORY#code-signing-policy) and [privacy](https://github.com/$GITHUB_REPOSITORY#privacy)." \
+            --notes "Download **Spacewise.exe** below and run it. Free code signing provided by SignPath.io, certificate by SignPath Foundation. See the [code signing policy](https://github.com/$GITHUB_REPOSITORY#code-signing-policy) and [privacy](https://github.com/$GITHUB_REPOSITORY#privacy)." \
             --generate-notes
