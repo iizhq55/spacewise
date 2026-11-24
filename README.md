@@ -20,7 +20,9 @@ You only delete what you understand.
 
 Get **`Spacewise.exe`** from [Releases](../../releases/latest) and run it. It's one file: no installer and no .NET needed. It runs on Windows 10 and 11 (64-bit).
 
-> Windows may show "Windows protected your PC" because the app isn't signed yet. Click **More info → Run anyway**.
+> Windows may show "Windows protected your PC" because the app isn't signed yet. Click **More info → Run anyway**. See the [code signing policy](#code-signing-policy).
+
+To uninstall, delete `Spacewise.exe`. To also remove your saved settings and last scan, delete the `%LOCALAPPDATA%\Spacewise` folder.
 
 ## Every item, explained
 
@@ -63,7 +65,7 @@ Searches skip Windows, programs and caches, so you only see your own files.
 - **System folders are locked.** Windows, and folders like `Users`, `AppData` and `ProgramData`, can't be deleted from the app.
 - **It never runs programs.** Double-clicking an `.exe` or a script shows it in its folder instead of running it.
 - **Recent temp files are left alone.** Cleanup skips anything changed in the last 24 hours, in case a program is still using it.
-- **No internet, no accounts, no tracking.** It only reads your disk.
+- **No accounts, no tracking.** It only reads your disk, and it goes online only when you click Ko-fi or the star button. See [Privacy](#privacy).
 - **The labels are tested.** Every rule that marks Windows, programs and your files has automated tests.
 
 ## Works like File Explorer
@@ -119,6 +121,26 @@ If someone hands you this repo, here's what you need to know:
   - Add a test in `tests/KnowledgeTests.cs` for every new label rule.
 - **Never** run the app's Clean or Delete actions on a real user's files while testing. Use the tests, which work on temporary files.
 
+## Code signing policy
+
+Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org).
+
+Every release is built from this repository's source by [GitHub Actions](.github/workflows/build.yml). Only builds made that way are signed, and each one is approved by hand.
+
+- Committers and reviewers: [iizhq55](https://github.com/iizhq55)
+- Approvers: [iizhq55](https://github.com/iizhq55)
+
+## Privacy
+
+This program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it.
+
+- It has no accounts, analytics, telemetry or update checks.
+- Your settings (just the language) and your last scan stay on your PC, in `%LOCALAPPDATA%\Spacewise`.
+- Only two things go online, and only when you click them:
+  - **Ko-fi** loads Ko-fi's donation page ([Ko-fi's privacy policy](https://more.ko-fi.com/privacy)).
+  - **The star button** opens this repository on GitHub in your browser.
+- The interface runs in Microsoft's WebView2, which is part of Windows and follows [Microsoft's privacy statement](https://privacy.microsoft.com/privacystatement).
+
 ## License
 
-MIT
+[MIT](LICENSE)
