@@ -165,10 +165,10 @@ public static class Cleanup
             var guid = vol.ToString();
             guid = guid[(guid.IndexOf('{'))..(guid.IndexOf('}') + 1)];
             using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey($@"Software\Microsoft\Windows\CurrentVersion\Explorer\BitBucket\Volume\{guid}");
-            if (key is null) return true; // Windows' defaults: a bin of several GB
-            if (key.GetValue("NukeOnDelete") is int nuke && nuke != 0) return false;
-            if (key.GetValue("MaxCapacity") is int maxMb && size > (long)maxMb << 20) return false;
-            return true;
+            if (key?.GetValue("NukeOnDelete") is int nuke && nuke != 0) return false;
+            // the bin's size limit; a drive whose bin was never set up uses Windows' default, about 5% of the drive
+            var maxBytes = key?.GetValue("MaxCapacity") is int maxMb ? (long)maxMb << 20 : new DriveInfo(root).TotalSize / 20;
+            return size <= maxBytes;
         }
         catch { return true; }
     }
